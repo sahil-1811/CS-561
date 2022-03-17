@@ -1,0 +1,142 @@
+FIRST NAME-SAHIIL MAHENDRA
+LAST NAME-MODY
+CWID-20007262
+ASSIGNMENT 1
+----------------------------------------Q1------------------------------------------------
+with T1 as(
+select  cust, min(quant) as min_Q, max(quant) as max_Q, avg(quant) as avg_Q
+  from sales
+  group by cust
+  ),
+  T2 as(
+  select T1.cust,T1.min_Q,Sales.prod as min_prod,Sales.date as min_date,
+  	Sales.state as min_state,T1.max_Q,T1.avg_Q
+  from T1,sales Sales
+  where T1.cust=Sales.cust and
+  	T1.min_Q=Sales.quant
+  )
+  select T2.cust,T2.min_Q,T2.min_prod,T2.min_date,T2.min_state,T2.max_Q,
+  	Sales.prod as max_prod,Sales.date as max_date, Sales.state as max_state,T2.avg_Q
+  from T2,sales Sales
+  where T2.cust= Sales.cust and T2.max_Q=Sales.quant
+
+
+
+-----------------------------------------Q2----------------------------------------------
+with T1 as
+ (select cust as Customer, prod , max(quant) as OCT_MAX
+  from sales S
+  where year>2017 and month=10
+  group by Customer,prod),
+  T2 as(
+  select T1.Customer,T1.prod,T1.OCT_MAX,S.date as OCT_DATE
+  from sales S,T1
+  where T1.Customer=S.cust and 
+  T1.prod=S.prod and 
+  T1.OCT_MAX=S.quant and
+  S.year>2017 and
+  S.month=10),
+  T3 as(
+  select cust as Customer, prod , min(quant) as NOV_MIN
+  from sales S
+  where month=11
+  group by Customer,prod),
+  T4 as(
+  select T3.Customer,T3.prod,T3.NOV_MIN,S.date as NOV_DATE
+  from sales S,T3
+  where T3.Customer=S.cust and 
+  T3.prod=S.prod and 
+  T3.NOV_MIN=S.quant and
+  S.month=11),
+ T5 as(
+ select cust as Customer, prod , min(quant) as DEC_MIN
+ from sales S
+ where month=12
+ group by Customer,prod),
+ T6 as(
+ select T5.Customer,T5.prod,T5.DEC_MIN,S.date as DEC_DATE
+ from sales S,T5
+ where T5.Customer=S.cust and 
+ T5.prod=S.prod and 
+ T5.DEC_MIN=S.quant and
+ S.month=12)
+
+ select T1.Customer,T1.prod as PRODUCT,T1.OCT_MAX,T2.OCT_DATE,T3.NOV_MIN,T4.NOV_DATE,T5.DEC_MIN,T6.DEC_DATE
+ from ((((T1 natural join T2) natural join T3)natural join T4)natural join T5)natural join T6
+ 
+
+------------------------------------------------Q3----------------------------------------
+with T1 as(
+ select month,prod,sum(quant) as sum_q
+ from sales S
+ group by month,prod
+ order by month
+ ),
+ T2 as(
+ select month, max(T1.sum_q) as most_pop_total_q, min(sum_q) as least_pop_total_q
+ from T1 	
+ group by month
+ ),
+ T3 as(
+ select T2.month,T1.prod as most_popular_prod,T2.most_pop_total_q,T2.least_pop_total_q
+ from T1,T2
+ where T1.sum_q=T2.most_pop_total_q and T1.month=T2.month)
+
+ select T3.month,T3.most_popular_prod,T3.most_pop_total_q,T1.prod as LEAST_POPULAR_PROD,T3.least_pop_total_q
+ from ((T1 natural join T2)natural join T3)
+ where
+ T1.sum_q=T2.least_pop_total_q
+ order by T3.month
+
+-------------------------------------------------Q4--------------------------------------
+
+With T1 as
+ (select month,prod,sum(quant) as sum_q
+  from sales
+  group by month,prod
+ ),
+ T2 as 
+ (select prod,max(T1.sum_q) as max_q,min(T1.sum_q) as min_q
+  from T1
+  group by prod
+  ),
+  T3 as 
+  (select T2.prod,T1.month as Most_Fav_Mo,T2.max_q,T2.min_q
+   from T1,T2
+   where T1.sum_q=T2.max_q and T1.prod=T2.prod
+  )
+  select T3.prod as PRODUCT,T3.Most_Fav_Mo,T1.month as Least_Fav_Mo
+  from ((T1 natural join T2)natural join T3)
+  where T1.sum_q=T3.min_q
+ order by T3.prod
+
+------------------------------------------------Q5---------------------------------------
+With T1 as
+  (select prod,cust,avg(quant) as average,sum(quant) as sum,count(quant) as count
+  from sales
+  where year between 2016 and 2020
+  group by prod,cust),
+  T2 as(
+  select prod,cust,avg(quant) as CT_AVG
+  from sales S
+  where state='CT'
+  group by cust,prod),
+  T3 as (
+  select prod,cust,avg(quant) as NY_AVG
+  from sales S
+  where state='NY'
+  group by cust,prod),
+  T4 as (
+  select prod,cust,avg(quant) as NJ_AVG
+  from sales S
+  where state='NJ'
+  group by cust,prod),
+  T5 as (
+  select prod,cust,avg(quant) as PA_AVG
+  from sales S
+  where state='PA'
+  group by cust,prod)
+ 
+ select T1.prod as PRODUCT,T1.cust as CUSTOMER,T2.CT_AVG,T3.NY_AVG,T4.NJ_AVG,T5.PA_AVG,T1.average,T1.sum as TOTAL,T1.count
+  from ((((T1 natural join T2)natural join T3)natural join T4)natural join T5)
+  order by prod,cust

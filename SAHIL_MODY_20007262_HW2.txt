@@ -1,0 +1,145 @@
+FIRST NAME-SAHIL MAHENDRA
+LAST NAME-MODY
+CWID-20007262
+ASSIGNMENT 2
+
+
+
+------------------------------------Q1---------------------------------------------------
+With T1 as
+(
+select cust,prod,state,month,round(avg(quant)) as avg from sales group by cust,prod,state,month
+	),
+	T2 as (
+		select T1.cust,T1.prod,T1.state,T1.month,round(avg(s.quant)) as prodavg 
+from sales s, T1
+where T1.cust=s.cust and
+T1.prod!=s.prod and
+T1.month = s.month and
+T1.state = s.state
+group by T1.cust,T1.prod,T1.state,T1.month
+		),
+T3 as(
+select T1.cust,T1.prod,T1.state,T1.month,round(avg(s.quant)) as monthavg
+from sales s, T1
+where T1.cust=s.cust and
+T1.prod=s.prod and
+T1.month != s.month and
+T1.state = s.state
+group by T1.cust,T1.prod,T1.state,T1.month),
+T4 as(
+select T1.cust,T1.prod,T1.state,T1.month,round(avg(s.quant)) as stateavg
+from sales s, T1
+where T1.cust=s.cust and
+T1.prod=s.prod and
+T1.month = s.month and
+T1.state != s.state
+group by T1.cust,T1.prod,T1.state,T1.month
+	)
+select T1.cust as "CUSTOMER",T1.prod as "PRODUCT",T1.month as "MONTH",T1.state as "STATE",T1.avg as "CUST_AVG", 
+T2.prodavg as "OTHER_PROD_AVG",T3.monthavg as "OTHER_MONTH_AVG",T4.stateavg as "OTHER_STATE_AVG"
+from T1 full join T2 on T1.cust=T2.cust and
+T1.prod=T2.prod and
+T1.month = T2.month and
+T1.state = T2.state
+full join T3 on
+T1.cust=T3.cust and
+T1.prod=T3.prod and
+T1.month = T3.month and
+T1.state = T3.state
+full join T4 on
+T1.cust=T4.cust and
+T1.prod=T4.prod and
+T1.month = T4.month and
+T1.state = T4.state
+
+
+-------------------------------------Q2--------------------------------------------------
+with T1 as (
+select cust,prod,state from sales group by cust,prod,state),
+Q1 as(
+select cust,prod,state,1 as Q1,round(avg(quant)) as avgquant
+from sales s
+where month in (1,2,3)
+group by cust,prod,state),
+Q2 as(
+select cust,prod,state,2 as Q1,round(avg(quant)) as avgquant
+from sales s
+where month in (4,5,6)
+group by cust,prod,state),
+Q3 as(
+select cust,prod,state,3 as Q1,round(avg(quant)) as avgquant
+from sales s
+where month in (7,8,9)
+group by cust,prod,state),
+Q4 as(
+select cust,prod,state,4 as Q1,round(avg(quant)) as avgquant
+from sales s
+where month in (10,11,12)
+group by cust,prod,state)
+select T1.cust as "CUSTOMER",T1.prod as "PRODUCT",T1.state as "STATE",1 as "Q1",null as "BEFORE_AVG",Q2.avgquant as "AFTER_AVG"
+from T1
+left join Q2 using(cust,prod,state)
+union
+select T1.cust as "CUSTOMER",T1.prod as "PRODUCT",T1.state as "STATE",2 as "Q1",Q1.avgquant as "BEFORE_AVG",Q3.avgquant as "AFTER_AVG"
+from T1
+left join Q1 using(cust,prod,state) 
+left join Q3 using(cust,prod,state)
+union
+select T1.cust as "CUSTOMER",T1.prod as "PRODUCT",T1.state as "STATE",3 as "Q1",Q2.avgquant as "BEFORE_AVG",Q4.avgquant as "AFTER_AVG"
+from T1
+left join Q2 using(cust,prod,state)
+left join Q4 using(cust,prod,state)
+union
+select T1.cust as "CUSTOMER",T1.prod as "PRODUCT",T1.state as "STATE",4 as "Q1",Q3.avgquant as "BEFORE_AVG",null as "AFTER_AVG"
+from T1
+left join Q3 using(cust,prod,state)
+order by "CUSTOMER","PRODUCT","STATE","Q1"
+
+-------------------------------------Q3---------------------------------------------------
+with T1 as
+(
+select prod, quant from sales group by prod,quant order by prod,quant
+	),
+T2 as
+(
+select prod,round((count(quant)/2)+1) as median from T1 group by prod order by prod
+	),
+T3 as
+(
+select a.prod,a.quant,count(b.quant) from T1 as a join T1 as b on b.quant<=a.quant and b.prod=a.prod
+group by a.prod,a.quant order by a.prod,a.quant
+)
+select T3.prod as "PRODUCT",T3.quant as "MEDIAN QUANT" 
+from T3 join T2 on T2.prod=T3.prod and T2.median=T3.count
+group by T3.prod,quant order by T3.prod
+
+----------------------------------------Q4-----------------------------------------------
+with T1 as
+(
+select cust,prod,month,sum(quant) from sales 
+group by cust,prod,month
+order by cust,prod,month
+),
+T2 as
+(
+select cust,prod,sum(sum) from T1
+group by cust,prod
+	),
+T3 as
+(
+select a.cust,a.prod,a.month,a.sum,sum(b.sum) as cumulative from T1 as a join T1 as b
+on b.month<=a.month and a.cust=b.cust and a.prod=b.prod
+group by a.cust,a.prod,a.month,a.sum
+order by a.cust,a.prod,a.month
+),
+T4 as
+(
+select T3.cust,T3.prod,T3.month from T3,T2 
+where T3.cust=T2.cust and T3.prod=T2.prod and T3.cumulative >= (0.75*T2.sum)
+order by T3.cust,T3.prod,T3.month
+)
+select T4.cust as "CUSTOMER",T4.prod as "PRODUCT",min(T4.month) as "75% PURCHASED BY MONTH"
+from T4
+group by T4.cust,T4.prod
+order by T4.cust,T4.prod
